@@ -69,7 +69,10 @@ class PostController extends Controller
     public function update(UpdatePostRequest $request, $id)
     {
         try {
+            $post = $this->postRepository->find($id);
+            $this->authorize('update', $post);
             $post = $this->postRepository->update($id, $request->only('title', 'content', 'category_id'));
+
             return ApiResponse::sendResponse(200, 'Post updated successfully', new PostResource($post));
         } catch (ModelNotFoundException $e) {
             return ApiResponse::sendResponse(404, 'Post not found');
@@ -81,7 +84,10 @@ class PostController extends Controller
     public function destroy($id)
     {
         try {
+            $post = $this->postRepository->find($id);
+            $this->authorize('delete', $post);
             $this->postRepository->delete($id);
+
             return ApiResponse::sendResponse(200, 'Post deleted successfully');
         } catch (ModelNotFoundException $e) {
             return ApiResponse::sendResponse(404, 'Post not found');

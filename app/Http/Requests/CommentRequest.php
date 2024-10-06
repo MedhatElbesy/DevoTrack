@@ -23,6 +23,15 @@ class CommentRequest extends FormRequest
     {
         return [
             'content' => 'required|string|max:1000',
+            'user_id'=> 'required'
         ];
+    }
+
+
+    public function prepareForValidation()
+    {
+        $this->merge(input: [
+            'user_id' => auth()->user()->id
+        ]);
     }
 }

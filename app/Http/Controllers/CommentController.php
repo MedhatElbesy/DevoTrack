@@ -39,7 +39,7 @@ class CommentController extends Controller
         try {
             $data = $request->validated();
             $data['post_id'] = $id->id;
-            $data['user_id'] = auth()->id();
+            // $data['user_id'] = auth()->id();
             $comment = $this->commentRepository->create($data);
 
             return ApiResponse::sendResponse(201, 'Comment created successfully', new CommentResource($comment));
