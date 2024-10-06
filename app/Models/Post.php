@@ -4,14 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Post extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'title', 'content', 'author_id', 'category_id'
-    ];
+            'title', 'content', 'author_id', 'category_id'
+        ];
 
 
     public function author()
@@ -27,5 +28,16 @@ class Post extends Model
     public function comments()
     {
         return $this->hasMany(Comment::class);
+    }
+
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saved(function () {
+            Cache::flush();
+        });
+
     }
 }

@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class PostRequest extends FormRequest
+class UpdateUserRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,17 +22,9 @@ class PostRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'       => 'required|string|max:255',
-            'content'     => 'required|string',
-            'category_id' => 'required|exists:categories,id',
-            'author_id'   => 'required'
+            'name'  => 'sometimes|required|string|max:255',
+            'email' => 'sometimes|required|email|unique:users,email,' . $this->user()->id,
+            'role'  => 'sometimes|required|string|in:user,admin',
         ];
-    }
-
-    public function prepareForValidation()
-    {
-        $this->merge(input: [
-            'author_id' => auth()->user()->id
-        ]);
     }
 }

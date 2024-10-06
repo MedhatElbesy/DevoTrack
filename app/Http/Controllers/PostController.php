@@ -7,21 +7,33 @@ use App\Http\Requests\PostRequest;
 use App\Http\Requests\UpdatePostRequest;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
+use App\Repositories\post\PostRepositoryInterface;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class PostController extends Controller
 {
-    public function index()
+    protected $postRepository;
+
+    public function __construct(PostRepositoryInterface $postRepository)
+    {
+        $this->postRepository = $postRepository;
+    }
+
+    public function index(Request $request)
     {
         try {
-            $posts = Post::with('author', 'category')->paginate(10);
-            return ApiResponse::sendResponse(
-                200,
-                'Posts retrieved successfully',
-                PostResource::collection($posts)
-            );
+            $filters = $request->only('category', 'author', 'start_date', 'end_date');
+            $cacheKey = 'posts_' . md5(json_encode($filters));
+
+            $posts = Cache::remember($cacheKey, 3600, function () use ($filters) {
+                return $this->postRepository->all($filters);
+            });
+
+            return ApiResponse::sendResponse(200, 'Posts retrieved successfully', PostResource::collection($posts));
         } catch (Exception $e) {
             return ApiResponse::sendResponse(500, 'Failed to retrieve posts', ['error' => $e->getMessage()]);
         }
@@ -30,12 +42,8 @@ class PostController extends Controller
     public function show($id)
     {
         try {
-            $post = Post::with('author', 'category')->findOrFail($id);
-            return ApiResponse::sendResponse(
-                200,
-                'Post retrieved successfully',
-                new PostResource($post)
-            );
+            $post = $this->postRepository->find($id);
+            return ApiResponse::sendResponse(200, 'Post retrieved successfully', new PostResource($post));
         } catch (ModelNotFoundException $e) {
             return ApiResponse::sendResponse(404, 'Post not found');
         } catch (Exception $e) {
@@ -45,16 +53,14 @@ class PostController extends Controller
 
     public function store(PostRequest $request)
     {
+
         try {
             $data = $request->validated();
-            $data['author_id'] = auth()->id();
-            $post = Post::create($data);
+            // dd(vars: $data);
+            // $data['author_id'] = auth()->id();
+            $post = $this->postRepository->create($data);
 
-            return ApiResponse::sendResponse(
-                201,
-                'Post created successfully',
-                new PostResource($post)
-            );
+            return ApiResponse::sendResponse(201, 'Post created successfully', new PostResource($post));
         } catch (Exception $e) {
             return ApiResponse::sendResponse(500, 'Failed to create post', ['error' => $e->getMessage()]);
         }
@@ -63,19 +69,8 @@ class PostController extends Controller
     public function update(UpdatePostRequest $request, $id)
     {
         try {
-            $post = Post::findOrFail($id);
-
-            if ($post->author_id !== auth()->id() && auth()->user()->role !== 'admin') {
-                return ApiResponse::sendResponse(403, 'Unauthorized to update this post');
-            }
-
-            $post->update($request->only('title', 'content', 'category_id'));
-
-            return ApiResponse::sendResponse(
-                200,
-                'Post updated successfully',
-                new PostResource($post)
-            );
+            $post = $this->postRepository->update($id, $request->only('title', 'content', 'category_id'));
+            return ApiResponse::sendResponse(200, 'Post updated successfully', new PostResource($post));
         } catch (ModelNotFoundException $e) {
             return ApiResponse::sendResponse(404, 'Post not found');
         } catch (Exception $e) {
@@ -86,14 +81,7 @@ class PostController extends Controller
     public function destroy($id)
     {
         try {
-            $post = Post::findOrFail($id);
-
-            if ($post->author_id !== auth()->id() && auth()->user()->role !== 'admin') {
-                return ApiResponse::sendResponse(403, 'Unauthorized to delete this post');
-            }
-
-            $post->delete();
-
+            $this->postRepository->delete($id);
             return ApiResponse::sendResponse(200, 'Post deleted successfully');
         } catch (ModelNotFoundException $e) {
             return ApiResponse::sendResponse(404, 'Post not found');

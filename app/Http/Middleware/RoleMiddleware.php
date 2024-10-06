@@ -17,7 +17,7 @@ class RoleMiddleware
     {
 
         if ($request->user()->role !== $role && $request->user()->role != 'admin') {
-            return response()->json(['message' => 'medhat'], 403);
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         return $next($request);

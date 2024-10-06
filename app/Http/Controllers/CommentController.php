@@ -7,19 +7,30 @@ use App\Http\Requests\CommentRequest;
 use App\Http\Resources\CommentResource;
 use App\Models\Comment;
 use App\Models\Post;
+use App\Repositories\comment\CommentRepositoryInterface;
 use Exception;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class CommentController extends Controller
 {
+    protected $commentRepository;
+
+    public function __construct(CommentRepositoryInterface $commentRepository)
+    {
+        $this->commentRepository = $commentRepository;
+    }
+
     public function index($postId)
     {
         try {
-            $comments = Comment::where('post_id', $postId)->get();
+            $comments = $this->commentRepository->getCommentsForPost($postId);
             return ApiResponse::sendResponse(200, 'Comments retrieved successfully', CommentResource::collection($comments));
+        } catch (ModelNotFoundException $e) {
+            return ApiResponse::sendResponse(404, 'Post not found');
         } catch (Exception $e) {
-            return ApiResponse::sendResponse(500, 'Failed to retrieve comments', $e->getMessage());
+            return ApiResponse::sendResponse(500, 'Failed to retrieve comments', ['error' => $e->getMessage()]);
         }
     }
 
@@ -29,56 +40,53 @@ class CommentController extends Controller
             $data = $request->validated();
             $data['post_id'] = $id->id;
             $data['user_id'] = auth()->id();
-            $comment = Comment::create($data);
+            $comment = $this->commentRepository->create($data);
 
             return ApiResponse::sendResponse(201, 'Comment created successfully', new CommentResource($comment));
         } catch (Exception $e) {
-            return ApiResponse::sendResponse(500, 'Failed to create comment', $e->getMessage());
+            return ApiResponse::sendResponse(500, 'Failed to create comment', ['error' => $e->getMessage()]);
         }
     }
 
     public function show($id)
     {
         try {
-            $comment = Comment::find($id);
-            if (!$comment) {
-                return ApiResponse::sendResponse(404, 'Comment not found');
-            }
+            $comment = $this->commentRepository->find($id);
             return ApiResponse::sendResponse(200, 'Comment retrieved successfully', new CommentResource($comment));
+        } catch (ModelNotFoundException $e) {
+            return ApiResponse::sendResponse(404, 'Comment not found');
         } catch (Exception $e) {
-            return ApiResponse::sendResponse(500, 'Failed to retrieve comment', $e->getMessage());
+            return ApiResponse::sendResponse(500, 'Failed to retrieve comment', ['error' => $e->getMessage()]);
         }
     }
 
     public function update(CommentRequest $request, $id)
     {
         try {
-            $comment = Comment::find($id);
-
-            if (!$comment) {
-                return ApiResponse::sendResponse(404, 'Comment not found');
-            }
+            $comment = $this->commentRepository->find($id);
             $this->authorize('update', $comment);
-            $comment->update($request->only('content'));
+            $comment = $this->commentRepository->update($id, $request->only('content'));
             return ApiResponse::sendResponse(200, 'Comment updated successfully', new CommentResource($comment));
+        } catch (ModelNotFoundException $e) {
+            return ApiResponse::sendResponse(404, 'Comment not found');
         } catch (Exception $e) {
-            return ApiResponse::sendResponse(500, 'Failed to update comment', $e->getMessage());
+            return ApiResponse::sendResponse(500, 'Failed to update comment', ['error' => $e->getMessage()]);
         }
     }
 
     public function destroy($id)
-    {
-        try {
-            $comment = Comment::find($id);
-            if (!$comment) {
-                return ApiResponse::sendResponse(404, 'Comment not found');
-            }
-            $this->authorize('delete', $comment);
-            $comment->delete();
-            return ApiResponse::sendResponse(200, 'Comment deleted successfully');
-        } catch (Exception $e) {
-            return ApiResponse::sendResponse(500, 'Failed to delete comment', $e->getMessage());
-        }
+{
+    try {
+        $comment = $this->commentRepository->find($id);
+        $this->authorize('delete', $comment);
+        $this->commentRepository->delete($id);
+
+        return ApiResponse::sendResponse(200, 'Comment deleted successfully');
+    } catch (ModelNotFoundException $e) {
+        return ApiResponse::sendResponse(404, 'Comment not found');
+    } catch (Exception $e) {
+        return ApiResponse::sendResponse(500, 'Failed to delete comment', ['error' => $e->getMessage()]);
     }
+}
 }
 

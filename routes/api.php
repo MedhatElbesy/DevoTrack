@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -22,11 +23,10 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 
-
 Route::middleware(['auth:api', 'role:author'])->group(function () {
+
     Route::post('logout',[AuthController::class,'logout']);
     Route::apiResource('categories', CategoryController::class)->only(['index','show']);
-
     Route::apiResource('posts', PostController::class);
 
     Route::controller(CommentController::class)->group(function (){
@@ -40,7 +40,14 @@ Route::middleware(['auth:api', 'role:author'])->group(function () {
 });
 
 Route::middleware(['auth:api', 'role:admin'])->group(function () {
+
     Route::apiResource('categories', CategoryController::class)->only(['store','update','destroy']);
 
+    Route::controller(UserController::class)->group(function (){
+        Route::get('users','index');
+        Route::get('users/{id}','show');
+        Route::put('users/{id}','update');
+        Route::delete('users/{id}','destroy');
+    });
 
 });
