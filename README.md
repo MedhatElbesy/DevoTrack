@@ -36,25 +36,25 @@ This project is a RESTful API for a blog platform built with Laravel. The API pr
 
 ## Installation
 
- 1. Clone the Repository
+ 1. **Clone the Repository**
 
 ```bash
 git clone https://github.com/MedhatElbesy/DevoTrack.git
 cd BlogPlatform
-
-2. Install Dependencies
+```
+2. **Install Dependencies**
 
 ```bash
-composer install
-
-3. Configure Environment Variables
+   composer install
+```
+3. **Configure Environment Variables**
 
 ```bash
 DB_CONNECTION=sqlite
 DB_DATABASE=database/database.sqlite
 JWT_SECRET=<your_jwt_secret_key>
-
-4. Generate Application and JWT Keys
+```
+4. **Generate Application and JWT Keys**
 
 ```bash
 php artisan key:generate
